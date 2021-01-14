@@ -1,0 +1,47 @@
+# https://github.com/traefik/traefik-helm-chart/blob/master/traefik/values.yaml
+deployment:
+  kind: DaemonSet
+
+logs:
+  access:
+    enabled: true
+
+globalArguments:
+  - "--global.checknewversion"
+  - "--global.sendanonymoususage"
+
+additionalArguments:
+  - "--entryPoints.traefik.address=:9000"
+  - "--entryPoints.web.address=:8000"
+  - "--entryPoints.web.http.redirections.entryPoint.to=:443"
+  - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
+  - "--entryPoints.web.http.redirections.entryPoint.permanent=true"
+  - "--entryPoints.websecure.address=:8443"
+  - "--accesslog=true"
+  # - "--metrics=true"
+  # - "--tracing=true"
+  - "--api.dashboard=true"
+  - "--ping=true"
+  - "--providers.kubernetescrd"
+  - "--providers.kubernetesingress"
+
+ports:
+  traefik:
+    port: 9000
+    expose: false
+    exposedPort: 9000
+    protocol: TCP
+  web:
+    port: 8000
+    expose: true
+    exposedPort: 80
+    protocol: TCP
+  websecure:
+    port: 8443
+    expose: true
+    exposedPort: 443
+    protocol: TCP
+
+service:
+  enabled: true
+  type: LoadBalancer
