@@ -1,0 +1,171 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jobs-api-deployment
+  labels:
+    app: jobs-api
+  namespace: project
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jobs-api
+  template:
+    metadata:
+      labels:
+        app: jobs-api
+    spec:
+      containers:
+        - image: developpementgroupe99cr.azurecr.io/jobs-api:base
+          env:
+            - name: ConnectionString
+              valueFrom:
+                secretKeyRef:
+                  name: mssql-secret-jobs
+                  key: costring
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "128m"
+            limits:
+              memory: "256Mi"
+              cpu: "256m"
+          imagePullPolicy: Always
+          name: jobs-api
+          ports:
+            - containerPort: 80
+      imagePullSecrets:
+        - name: acr-secret
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: jobs-api-svc
+  name: jobs-api-svc
+  namespace: project
+spec:
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  selector:
+    app: jobs-api
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mssql-secret-jobs
+  namespace: project
+type: Opaque
+data:
+  costring: U2VydmVyPXNxbC1kYXRhLXN2Yy5kYXRhYmFzZS5zdmMuY2x1c3Rlci5sb2NhbDtVc2VyPXNhO1Bhc3N3b3JkPVBhc3NAd29yZDtEYXRhYmFzZT1kb3RuZXRnaWdzLmpvYnM=
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: jobs-api-netpol-allow-communication-with-web
+  namespace: project
+spec:
+  podSelector:
+    matchLabels:
+      app: jobs-api
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              role: project
+        - podSelector:
+            matchLabels:
+              app: web
+      ports:
+        - protocol: TCP
+          port: 80
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              role: project
+        - podSelector:
+            matchLabels:
+              app: web
+      ports:
+        - protocol: TCP
+          port: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: jobs-api-netpol-allow-communication-with-rabbitmq
+  namespace: project
+spec:
+  podSelector:
+    matchLabels:
+      app: jobs-api
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              role: project
+        - podSelector:
+            matchLabels:
+              app: rabbitmq
+      ports:
+        - protocol: TCP
+          port: 80
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              role: project
+        - podSelector:
+            matchLabels:
+              app: rabbitmq
+      ports:
+        - protocol: TCP
+          port: 5672
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: jobs-api-netpol-allow-communication-with-sql
+  namespace: project
+spec:
+  podSelector:
+    matchLabels:
+      app: jobs-api
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              role: database
+        - podSelector:
+            matchLabels:
+              app: sql.data
+      ports:
+        - protocol: TCP
+          port: 80
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              role: database
+        - podSelector:
+            matchLabels:
+              app: sql.data
+      ports:
+        - protocol: TCP
+          port: 1433

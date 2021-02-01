@@ -1,0 +1,96 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq-deployment
+  labels:
+    app: rabbitmq
+  namespace: project
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+        - image: rabbitmq:3-management
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "250m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          imagePullPolicy: Always
+          name: rabbitmq
+          ports:
+            - containerPort: 15672
+              name: manage-console
+            - containerPort: 5672
+              name: main-port
+      restartPolicy: Always
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: rabbitmq-svc
+  name: rabbitmq-svc
+  namespace: project
+spec:
+  ports:
+    - name: management-console
+      port: 15672
+      targetPort: 15672
+    - name: main-port
+      port: 5672
+      targetPort: 5672
+  selector:
+    app: rabbitmq
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rabbitmq-netpol-allow-communication-with-apis
+  namespace: project
+spec:
+  podSelector:
+    matchLabels:
+      app: rabbitmq
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              role: project
+        - podSelector:
+            matchLabels:
+              app: jobs-api
+        - podSelector:
+            matchLabels:
+              app: applicants-api
+      ports:
+        - protocol: TCP
+          port: 5672
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              role: project
+        - podSelector:
+            matchLabels:
+              app: jobs-api
+        - podSelector:
+            matchLabels:
+              app: applicants-api
+      ports:
+        - protocol: TCP
+          port: 80

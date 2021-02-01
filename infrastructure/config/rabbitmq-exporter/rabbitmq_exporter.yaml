@@ -1,0 +1,4 @@
+rabbitmq:
+  user: guest
+  password: guest
+  url: http://rabbitmq-svc.project.svc.cluster.local:15672

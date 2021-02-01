@@ -1,0 +1,46 @@
+resources:
+  repositories:
+  - repository: self
+    type: git
+    ref: develop
+jobs:
+- job: Job_1
+  displayName: Agent job 1
+  pool:
+    vmImage: ubuntu-20.04
+  steps:
+  - checkout: self
+  - task: Docker@0
+    displayName: Build a container image
+    inputs:
+      azureSubscriptionEndpoint: dc4348f2-93b5-45c6-a1b4-c646e31e3c58
+      azureContainerRegistry: '{"loginServer":"developpementgroupe99cr.azurecr.io", "id" : "/subscriptions/1f59676e-fced-4b72-96cf-87eda29b75c5/resourceGroups/DeveloppementGroupe99Rg/providers/Microsoft.ContainerRegistry/registries/DeveloppementGroupe99Cr"}'
+      imageName: developpementgroupe99cr.azurecr.io/web:$(Build.BuildId)
+  - task: Docker@0
+    displayName: Push a container image
+    inputs:
+      azureSubscriptionEndpoint: dc4348f2-93b5-45c6-a1b4-c646e31e3c58
+      azureContainerRegistry: '{"loginServer":"developpementgroupe99cr.azurecr.io", "id" : "/subscriptions/1f59676e-fced-4b72-96cf-87eda29b75c5/resourceGroups/DeveloppementGroupe99Rg/providers/Microsoft.ContainerRegistry/registries/DeveloppementGroupe99Cr"}'
+      action: Push an image
+      imageName: developpementgroupe99cr.azurecr.io/web:$(Build.BuildId)
+  - task: KubernetesManifest@0
+    displayName: deploy
+    inputs:
+      kubernetesServiceConnection: 4e883d94-b168-4071-bd72-d35b94fb1bad
+      manifests: web-manifest.yaml
+      containers: $(Build.Repository.Name):$(Build.BuildId)
+  - task: Kubernetes@1
+    displayName: kubectl set
+    inputs:
+      kubernetesServiceEndpoint: 4e883d94-b168-4071-bd72-d35b94fb1bad
+      command: set
+      configurationType: inline
+      configuration: web-manifest.yaml
+      arguments: image deployment/web -n project web=developpementgroupe99cr.azurecr.io/web:$(Build.BuildId) --record
+  - task: Kubernetes@1
+    displayName: kubectl get
+    inputs:
+      kubernetesServiceEndpoint: 4e883d94-b168-4071-bd72-d35b94fb1bad
+      namespace: project
+      command: get
+      arguments: pods -o wide

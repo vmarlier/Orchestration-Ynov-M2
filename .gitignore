@@ -1,6 +1,9 @@
 
 # Created by https://www.toptal.com/developers/gitignore/api/windows,macos,linux,vscode,vim,terraform
 # Edit at https://www.toptal.com/developers/gitignore?templates=windows,macos,linux,vscode,vim,terraform
+kubeconfig
+kubeconfig.yml
+kubeconfig*
 
 ### Linux ###
 *~
@@ -53,6 +56,8 @@ Temporary Items
 # .tfstate files
 *.tfstate
 *.tfstate.*
+
+.terraform.lock.hcl
 
 # Crash log files
 crash.log

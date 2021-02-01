@@ -1,0 +1,112 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mssql-secret
+  namespace: project
+type: Opaque
+data:
+  costring: U2VydmVyPXNxbC1kYXRhLXN2Yy5kYXRhYmFzZS5zdmMuY2x1c3Rlci5sb2NhbDoxNDMzO1VzZXI9c2E7UGFzc3dvcmQ9UGFzc0B3b3JkO0RhdGFiYXNlPWRvdG5ldGdpZ3MuYXBwbGljYW50czs=
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sql-data-svc
+  namespace: database
+spec:
+  ports:
+    - protocol: TCP
+      port: 1433
+      targetPort: 1433
+  selector:
+    app: sql.data
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: sql.data
+  name: sql.data
+  namespace: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sql.data
+  template:
+    metadata:
+      labels:
+        app: sql.data
+    spec:
+      containers:
+        - image: developpementgroupe99cr.azurecr.io/mssql-linux:base
+          imagePullPolicy: Always
+          name: mssql-linux
+          ports:
+            - containerPort: 1433
+          volumeMounts:
+            - mountPath: /var/opt/mssql
+              name: mssqlsystem
+      restartPolicy: Always
+      imagePullSecrets:
+        - name: acr-secret
+      volumes:
+        - name: mssqlsystem
+          persistentVolumeClaim:
+            claimName: mssql-system-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  namespace: database
+  name: mssql-system-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sql-netpol-allow-communication-with-apis
+  namespace: database
+spec:
+  podSelector:
+    matchLabels:
+      app: sql.data
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              role: project
+        - podSelector:
+            matchLabels:
+              app: jobs-api
+        - podSelector:
+            matchLabels:
+              app: applicants-api
+      ports:
+        - protocol: TCP
+          port: 1433
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              role: project
+        - podSelector:
+            matchLabels:
+              app: jobs-api
+        - podSelector:
+            matchLabels:
+              app: applicants-api
+      ports:
+        - protocol: TCP
+          port: 80

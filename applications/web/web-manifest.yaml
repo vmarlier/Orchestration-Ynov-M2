@@ -1,0 +1,152 @@
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: web-https-ingressroute
+  labels:
+    app: web
+  namespace: project
+spec:
+  entrypoint:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`donneznous20.ml`) && PathPrefix(`/`)
+      services:
+        - kind: Service
+          name: web-svc
+          port: 8080
+  tls:
+    secretName: traefik-cert
+    domain:
+      - main: donneznous20.ml
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: web
+  name: web-svc
+  namespace: project
+spec:
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 80
+  selector:
+    app: web
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  labels:
+    app: web
+  namespace: project
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - image: developpementgroupe99cr.azurecr.io/web:base
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "500m"
+            limits:
+              memory: "256Mi"
+              cpu: "750m"
+          imagePullPolicy: Always
+          name: web
+          ports:
+            - containerPort: 80
+      imagePullSecrets:
+        - name: acr-secret
+      restartPolicy: Always
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: web-netpol-allow-incoming-request-from-traefik2
+  namespace: project
+spec:
+  podSelector:
+    matchLabels:
+      app: web
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: traefik2
+      ports:
+        - protocol: TCP
+          port: 80
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: traefik2
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: web-netpol-allow-communication-with-apis
+  namespace: project
+spec:
+  podSelector:
+    matchLabels:
+      app: web
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              role: project
+        - podSelector:
+            matchLabels:
+              app: jobs-api
+        - podSelector:
+            matchLabels:
+              app: applicants-api
+        - podSelector:
+            matchLabels:
+              app: identity-api
+      ports:
+        - protocol: TCP
+          port: 80
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              role: project
+        - podSelector:
+            matchLabels:
+              app: jobs-api
+        - podSelector:
+            matchLabels:
+              app: applicants-api
+        - podSelector:
+            matchLabels:
+              app: identity-api
+      ports:
+        - protocol: TCP
+          port: 80

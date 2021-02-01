@@ -1,0 +1,19 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: grafana-ingressroute-https
+  namespace: monitoring
+spec:
+  entrypoint:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`donneznous20.ml`) && PathPrefix(`/grafana`)
+      services:
+        - kind: Service
+          name: grafana
+          port: 80
+  tls:
+    secretName: traefik-cert
+    domain:
+      - main: donneznous20.ml
