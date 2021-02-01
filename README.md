@@ -7,9 +7,9 @@ Le but était de migrer une application en micro-service vers un cluster Kuberne
 - Quentin Leclercq [@QuentinL-hub](https://github.com/QuentinL-hub)
 - Valentin Marlier [@vmarlier](https://github.com/vmarlier)
 
-Slide de rendu final: /files/Soutenance-slide.pdf
+**[Slide de rendu final](files/Soutenance-slide.pdf)**
 
-Diagram de l'infrastructure finale:
+**Diagram de l'infrastructure finale:**
 ![Architecture Diagram](files/archi-microservice.png)
 
 # I- Sujet
